@@ -56,14 +56,14 @@ File Manager : http://<IP>:810N/file.php
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/<username>/dvwa-lab-deployer.git
+git clone https://github.com/tint-us/dvwa-lab-deployer.git
 cd dvwa-lab-deployer
 
 # 2. Beri izin eksekusi
-chmod +x dvwa-manager-v2.sh
+chmod +x dvwa-manager.sh
 
 # 3. Jalankan sebagai root
-sudo ./dvwa-manager-v2.sh
+sudo ./dvwa-manager.sh
 ```
 
 ## Konfigurasi
@@ -209,14 +209,14 @@ File Manager : http://<IP>:810N/file.php
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/<username>/dvwa-lab-deployer.git
+git clone https://github.com/tint-us/dvwa-lab-deployer.git
 cd dvwa-lab-deployer
 
 # 2. Make executable
-chmod +x dvwa-manager-v2.sh
+chmod +x dvwa-manager.sh
 
 # 3. Run as root
-sudo ./dvwa-manager-v2.sh
+sudo ./dvwa-manager.sh
 ```
 
 ## Configuration

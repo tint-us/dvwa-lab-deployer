@@ -56,14 +56,14 @@ File Manager : http://<IP>:810N/file.php
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/tint-us/dvwa-lab-deployer.git
+git clone https://github.com/tintus/dvwa-lab-deployer.git
 cd dvwa-lab-deployer
 
 # 2. Beri izin eksekusi
-chmod +x dvwa-manager.sh
+chmod +x dvwa-manager-v2.sh
 
 # 3. Jalankan sebagai root
-sudo ./dvwa-manager.sh
+sudo ./dvwa-manager-v2.sh
 ```
 
 ## Konfigurasi
@@ -153,7 +153,12 @@ Log dirotasi otomatis ketika ukuran melebihi 50MB.
 
 ## Lisensi
 
-MIT License — bebas digunakan dan dimodifikasi.
+Gratis untuk penggunaan personal, edukasi, dan internal organisasi.
+Jika kamu menggunakan tool ini untuk keperluan komersial, kamu dipersilakan (tapi tidak diwajibkan) untuk berdonasi.
+
+Donasi: [ko-fi.com/tintus](https://ko-fi.com/tintus)
+
+Lihat [LICENSE](./LICENSE) untuk detail lengkap.
 
 ---
 
@@ -209,14 +214,14 @@ File Manager : http://<IP>:810N/file.php
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/tint-us/dvwa-lab-deployer.git
+git clone https://github.com/tintus/dvwa-lab-deployer.git
 cd dvwa-lab-deployer
 
 # 2. Make executable
-chmod +x dvwa-manager.sh
+chmod +x dvwa-manager-v2.sh
 
 # 3. Run as root
-sudo ./dvwa-manager.sh
+sudo ./dvwa-manager-v2.sh
 ```
 
 ## Configuration
@@ -306,4 +311,9 @@ Logs are automatically rotated when size exceeds 50MB.
 
 ## License
 
-MIT License — free to use and modify.
+Free for personal, educational, and internal organizational use.
+If you use this tool commercially, you are kindly encouraged (but not required) to donate.
+
+Donate: [ko-fi.com/tintus](https://ko-fi.com/tintus)
+
+See [LICENSE](./LICENSE) for full details.

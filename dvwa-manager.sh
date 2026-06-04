@@ -2,7 +2,7 @@
 #!/bin/bash
 
 # ============================================================
-#  DVWA Lab Manager v2
+#  DVWA Lab Manager
 #  Deploy & reset multiple DVWA + MariaDB instances
 #  TinyFileManager di-inject ke web root DVWA (file.php)
 #  Optimized for Rocky / Alma Linux (Container Permission Fix)
@@ -85,7 +85,7 @@ log_step()   { log "STEP"   "$1"; echo -e "   $1"; }
 print_banner() {
     echo -e "${CYAN}"
     echo "╔════════════════════════════════════════════════════════╗"
-    echo "║           DVWA Lab Manager v2                          ║"
+    echo "║           DVWA Lab Manager                             ║"
     echo "║   Security Awareness Training - Lab Deployer           ║"
     echo "║   DVWA + MariaDB + TinyFileManager (file.php)          ║"
     echo "║   Rocky / Alma Linux                                   ║"
@@ -128,7 +128,7 @@ get_vm_ip() {
 
 check_root() {
     if [[ "$EUID" -ne 0 ]]; then
-        echo -e "${RED}Script ini harus dijalankan sebagai root (sudo ./dvwa-manager-v2.sh)${NC}"
+        echo -e "${RED}Script ini harus dijalankan sebagai root (sudo ./dvwa-manager.sh)${NC}"
         exit 1
     fi
 }
@@ -447,7 +447,7 @@ deploy_pair() {
 
     # --- 3. INJEKSI FILE DARI DALAM CONTAINER (Solusi Hak Akses POSIX) ---
     log "STEP" "[$i] Meng-copy file.php langsung ke dalam volume kontainer..."
-    docker cp "$TFM_HOST_PATH" "${dvwa_name}:/var/www/html/${TFM_FILENAME}"
+    docker cp "$TFM_HOST_PATH" "${dvwa_name}:/var/www/html/${TFM_FILENAME}" > /dev/null 2>&1
     
     log "STEP" "[$i] Memperbaiki kepemilikan user www-data di dalam kontainer..."
     docker exec -u 0 "$dvwa_name" chown www-data:www-data "/var/www/html/${TFM_FILENAME}"
@@ -506,10 +506,10 @@ action_deploy() {
     local count
     while true; do
         read -rp "$(echo -e "${BOLD}Mau deploy berapa instance? ${NC}")" count
-        if [[ "$count" =~ ^[1-9][0-9]*$ ]] && (( count <= 100 )); then
+        if [[ "$count" =~ ^[1-9][0-9]*$ ]] && (( count <= 999 )); then
             break
         fi
-        echo -e "${RED}Input angka 1-100 ya.${NC}"
+        echo -e "${RED}Input angka 1-999 ya.${NC}"
     done
 
     local base_dvwa
@@ -738,10 +738,10 @@ action_add_instances() {
     local add_count
     while true; do
         read -rp "$(echo -e "${BOLD}Tambah berapa instance? ${NC}")" add_count
-        if [[ "$add_count" =~ ^[1-9][0-9]*$ ]] && (( add_count <= 100 )); then
+        if [[ "$add_count" =~ ^[1-9][0-9]*$ ]] && (( add_count <= 999 )); then
             break
         fi
-        echo -e "${RED}Input angka 1-100 ya.${NC}"
+        echo -e "${RED}Input angka 1-999 ya.${NC}"
     done
 
     local last_new_i=$((last_i + add_count))
@@ -957,13 +957,89 @@ action_view_log() {
 }
 
 # ============================================================
+# MENU: EXPORT INFO PESERTA
+# ============================================================
+
+action_export() {
+    print_separator
+    log_action "EXPORT INFO PESERTA"
+    print_separator
+
+    local all
+    all=$(get_all_dvwa)
+
+    if [[ -z "$all" ]]; then
+        log_warn "Belum ada instance yang di-deploy."
+        return
+    fi
+
+    local vm_ip
+    vm_ip=$(get_vm_ip)
+    local base_dvwa
+    base_dvwa=$(get_dvwa_base_port)
+    local count
+    count=$(echo "$all" | grep -c . || true)
+    local ts
+    ts=$(date '+%Y%m%d_%H%M%S')
+
+    echo "Format export:"
+    echo "  [1] TXT"
+    echo "  [2] CSV"
+    echo "  [b] Batal"
+    echo ""
+    read -rp "$(echo -e "${BOLD}Pilih format: ${NC}")" fmt_choice
+
+    case "$fmt_choice" in
+        1)
+            local outfile="/tmp/dvwa-peserta-${ts}.txt"
+            {
+                echo "DVWA Lab — Info Akses Peserta"
+                echo "Generated: $(date '+%Y-%m-%d %H:%M:%S')"
+                echo "Total peserta: $count"
+                echo "========================================"
+                echo ""
+                for i in $(seq 1 "$count"); do
+                    local port=$((base_dvwa + i - 1))
+                    echo "Peserta $i"
+                    echo "   DVWA        : http://${vm_ip}:${port}/         (admin / password)"
+                    echo "   FileManager : http://${vm_ip}:${port}/file.php (${TFM_USER} / ${TFM_PASS})"
+                    echo ""
+                done
+            } > "$outfile"
+            log_ok "Export TXT selesai: $outfile"
+            echo -e "${CYAN}File tersimpan di: $outfile${NC}"
+            ;;
+        2)
+            local outfile="/tmp/dvwa-peserta-${ts}.csv"
+            {
+                echo "Peserta,DVWA URL,DVWA User,DVWA Password,FileManager URL,FM User,FM Password"
+                for i in $(seq 1 "$count"); do
+                    local port=$((base_dvwa + i - 1))
+                    echo "$i,http://${vm_ip}:${port}/,admin,password,http://${vm_ip}:${port}/file.php,${TFM_USER},${TFM_PASS}"
+                done
+            } > "$outfile"
+            log_ok "Export CSV selesai: $outfile"
+            echo -e "${CYAN}File tersimpan di: $outfile${NC}"
+            ;;
+        b|B)
+            echo "Dibatalkan."
+            return
+            ;;
+        *)
+            echo -e "${RED}Pilihan tidak valid.${NC}"
+            return
+            ;;
+    esac
+}
+
+# ============================================================
 # MAIN MENU LOOP
 # ============================================================
 
 main() {
     check_root
     log_init
-    log "INFO" "===== DVWA Lab Manager v2 dijalankan (PID $$, user: $(whoami)) ====="
+    log "INFO" "===== DVWA Lab Manager dijalankan (PID $$, user: $(whoami)) ====="
     log "INFO" "VM IP: $(get_vm_ip)"
     log "INFO" "Script version: $(date -r "$0" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo 'unknown')"
 
@@ -989,7 +1065,8 @@ main() {
         echo "  [5] Stop semua instances"
         echo "  [6] Destroy semua instances (hapus permanen)"
         echo "  [7] Tambah instance"
-        echo "  [8] Lihat log"
+        echo "  [8] Export info peserta (TXT/CSV)"
+        echo "  [9] Lihat log"
         echo "  [q] Keluar"
         print_separator
         read -rp "$(echo -e "${BOLD}Pilih menu: ${NC}")" choice
@@ -1004,9 +1081,10 @@ main() {
             5) action_stop    ;;
             6) action_destroy ;;
             7) action_add_instances ;;
-            8) action_view_log ;;
+            8) action_export ;;
+            9) action_view_log ;;
             q|Q)
-                log "INFO" "===== DVWA Lab Manager v2 keluar (PID $$) ====="
+                log "INFO" "===== DVWA Lab Manager keluar (PID $$) ====="
                 echo -e "${CYAN}Bye! Good luck dengan trainingnya!${NC}"
                 exit 0
                 ;;

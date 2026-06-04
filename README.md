@@ -9,7 +9,7 @@
 
 ## Tentang
 
-`dvwa-lab-deployer` adalah shell script interaktif untuk mengelola deployment massal [DVWA (Damn Vulnerable Web Application)](https://github.com/digininja/DVWA) menggunakan Docker. Dibuat untuk kebutuhan security awareness training di mana setiap peserta mendapat environment DVWA yang terisolasi.
+`dvwa-lab-deployer` adalah shell script interaktif untuk mengelola deployment massal [DVWA (Damn Vulnerable Web Application)](https://github.com/digininja/DVWA) menggunakan Docker. Dibuat untuk kebutuhan yang memerlukan multiple instance DVWA secara bersamaan — mulai dari security awareness training, lab praktik, CTF setup, hingga research environment — di mana setiap peserta atau pengguna mendapat environment DVWA yang terisolasi.
 
 Fitur utama:
 - Deploy N instance DVWA sekaligus, masing-masing dengan MariaDB dan TinyFileManager
@@ -56,14 +56,14 @@ File Manager : http://<IP>:810N/file.php
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/tintus/dvwa-lab-deployer.git
+git clone https://github.com/tint-us/dvwa-lab-deployer.git
 cd dvwa-lab-deployer
 
 # 2. Beri izin eksekusi
-chmod +x dvwa-manager-v2.sh
+chmod +x dvwa-manager.sh
 
 # 3. Jalankan sebagai root
-sudo ./dvwa-manager-v2.sh
+sudo ./dvwa-manager.sh
 ```
 
 ## Konfigurasi
@@ -167,7 +167,7 @@ Lihat [LICENSE](./LICENSE) untuk detail lengkap.
 
 ## About
 
-`dvwa-lab-deployer` is an interactive shell script for managing mass deployment of [DVWA (Damn Vulnerable Web Application)](https://github.com/digininja/DVWA) using Docker. Built for security awareness training where each participant gets an isolated DVWA environment.
+`dvwa-lab-deployer` is an interactive shell script for managing mass deployment of [DVWA (Damn Vulnerable Web Application)](https://github.com/digininja/DVWA) using Docker. Built for any use case requiring multiple simultaneous DVWA instances — including security awareness training, hands-on labs, CTF setups, and research environments — where each participant or user gets an isolated DVWA environment.
 
 Key features:
 - Deploy N DVWA instances at once, each with its own MariaDB and TinyFileManager
@@ -214,14 +214,14 @@ File Manager : http://<IP>:810N/file.php
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/tintus/dvwa-lab-deployer.git
+git clone https://github.com/tint-us/dvwa-lab-deployer.git
 cd dvwa-lab-deployer
 
 # 2. Make executable
-chmod +x dvwa-manager-v2.sh
+chmod +x dvwa-manager.sh
 
 # 3. Run as root
-sudo ./dvwa-manager-v2.sh
+sudo ./dvwa-manager.sh
 ```
 
 ## Configuration

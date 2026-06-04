@@ -151,6 +151,10 @@ Log disimpan di `/var/log/dvwa-manager.log` dengan format:
 
 Log dirotasi otomatis ketika ukuran melebihi 50MB.
 
+## Kontak
+
+Untuk diskusi, pertanyaan, atau saran lebih lanjut, silakan hubungi via email: [tintus.ardi@gmail.com](mailto:tintus.ardi@gmail.com)
+
 ## Lisensi
 
 Gratis untuk penggunaan personal, edukasi, dan internal organisasi.
@@ -308,6 +312,10 @@ Logs are saved to `/var/log/dvwa-manager.log` in the following format:
 ```
 
 Logs are automatically rotated when size exceeds 50MB.
+
+## Contact
+
+For discussions, questions, or suggestions, feel free to reach out via email: [tintus.ardi@gmail.com](mailto:tintus.ardi@gmail.com)
 
 ## License
 

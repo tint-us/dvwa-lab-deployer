@@ -1,5 +1,12 @@
 # dvwa-lab-deployer
 
+![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat&logo=gnu-bash&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=flat&logo=mariadb&logoColor=white)
+![DVWA](https://img.shields.io/badge/DVWA-red?style=flat)
+![License](https://img.shields.io/badge/license-Custom-blue?style=flat)
+![Ko-fi](https://img.shields.io/badge/donate-Ko--fi-FF5E5B?style=flat&logo=ko-fi&logoColor=white)
+
 **[Bahasa Indonesia](#bahasa-indonesia) | [English](#english)**
 
 ---

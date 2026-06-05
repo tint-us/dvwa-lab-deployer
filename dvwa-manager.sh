@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 # ============================================================
@@ -375,6 +374,41 @@ get_dvwa_base_port() {
 # DEPLOY SINGLE PAIR (MariaDB + DVWA dengan file.php)
 # ============================================================
 
+# ============================================================
+# HELPER: PARSE INPUT LIST INSTANCE
+# "25-27,31,33,38" → "25 26 27 31 33 38"
+# ============================================================
+
+parse_instance_list() {
+    local input="$1"
+    local result=()
+    # Split by comma
+    IFS=',' read -ra parts <<< "$input"
+    for part in "${parts[@]}"; do
+        part="${part// /}"  # trim spaces
+        if [[ "$part" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+            local start="${BASH_REMATCH[1]}"
+            local end="${BASH_REMATCH[2]}"
+            if (( start <= end )); then
+                for n in $(seq "$start" "$end"); do
+                    result+=("$n")
+                done
+            else
+                echo ""
+                return 1
+            fi
+        elif [[ "$part" =~ ^[0-9]+$ ]]; then
+            result+=("$part")
+        else
+            echo ""
+            return 1
+        fi
+    done
+    # Deduplicate dan sort
+    printf '%s
+' "${result[@]}" | sort -nu | tr '\n' ' '
+}
+
 deploy_pair() {
     local i="$1"
     local dvwa_port="$2"
@@ -403,8 +437,14 @@ deploy_pair() {
         -e "TZ=${TZ}" \
         --restart unless-stopped \
         "$DB_IMAGE" > /dev/null 2>&1; then
-        log "ERROR" "[$i] MariaDB gagal deploy"
-        echo -e "   ${RED}Peserta $i — MariaDB gagal${NC}"
+        local err_detail
+        err_detail=$(docker run --rm --name "${db_name}-test" \
+            --network "$NETWORK_NAME" \
+            -v "${db_vol_name}:/var/lib/mysql" \
+            -e "MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS}" \
+            "$DB_IMAGE" 2>&1 | tail -5 || true)
+        log "ERROR" "[$i] MariaDB gagal deploy. Detail: $err_detail"
+        echo -e "   ${RED}Peserta $i — MariaDB gagal (lihat log: $LOG_FILE)${NC}"
         return 1
     fi
     log "OK" "[$i] MariaDB up: $db_name"
@@ -415,8 +455,8 @@ deploy_pair() {
     until docker exec "$db_name" mariadb-admin ping -u root -p"${DB_ROOT_PASS}" --silent 2>/dev/null; do
         ((attempts++))
         if (( attempts >= 30 )); then
-            log "ERROR" "[$i] MariaDB timeout setelah 30 detik"
-            echo -e "   ${RED}Peserta $i — MariaDB timeout${NC}"
+            log "ERROR" "[$i] MariaDB timeout setelah 30 detik. Logs: $(docker logs $db_name 2>&1 | tail -5)"
+            echo -e "   ${RED}Peserta $i — MariaDB timeout (lihat log: $LOG_FILE)${NC}"
             docker rm -f "$db_name" > /dev/null 2>&1 || true
             return 1
         fi
@@ -439,8 +479,10 @@ deploy_pair() {
         -e "TZ=${TZ}" \
         --restart unless-stopped \
         "$DVWA_IMAGE" > /dev/null 2>&1; then
-        log "ERROR" "[$i] DVWA gagal deploy"
-        echo -e "   ${RED}Peserta $i — DVWA gagal${NC}"
+        local dvwa_err
+        dvwa_err=$(docker logs "${dvwa_name}" 2>&1 | tail -5 || true)
+        log "ERROR" "[$i] DVWA gagal deploy. Detail: $dvwa_err"
+        echo -e "   ${RED}Peserta $i — DVWA gagal (lihat log: $LOG_FILE)${NC}"
         docker rm -f "$db_name" > /dev/null 2>&1 || true
         return 1
     fi
@@ -551,20 +593,60 @@ action_deploy() {
 
     local success=0
     local fail=0
+    local failed_list=()
 
     for i in $(seq 1 "$count"); do
         local dvwa_port=$((base_dvwa + i - 1))
         if deploy_pair "$i" "$dvwa_port" "$vm_ip"; then
             ((success++))
         else
-            ((fail++))
+            # Auto retry 1x
+            log "WARN" "[$i] Gagal pertama, retry otomatis..."
+            echo -e "   ${YELLOW}Peserta $i gagal, retry otomatis...${NC}"
+            destroy_pair "$i" "false" > /dev/null 2>&1 || true
+            sleep 2
+            if deploy_pair "$i" "$dvwa_port" "$vm_ip"; then
+                ((success++))
+                log "OK" "[$i] Retry berhasil"
+            else
+                ((fail++))
+                failed_list+=("$i")
+                log "ERROR" "[$i] Retry juga gagal"
+            fi
         fi
     done
 
     echo ""
     print_separator
     log_ok "Deploy selesai. Berhasil: $success / Gagal: $fail dari $count instance."
-    [[ $fail -gt 0 ]] && log_error "Gagal: $fail instance"
+    [[ $fail -gt 0 ]] && log_error "Gagal: $fail instance — peserta: ${failed_list[*]}"
+
+    # Prompt retry manual untuk yang masih gagal
+    if [[ $fail -gt 0 ]]; then
+        echo ""
+        echo -e "${YELLOW}Instance gagal: ${failed_list[*]}${NC}"
+        echo -e "${YELLOW}Cek detail error: tail -50 $LOG_FILE${NC}"
+        read -rp "Mau retry instance yang gagal? (y/n): " retry_ans
+        if [[ "$retry_ans" == "y" ]]; then
+            local retry_success=0
+            local still_fail=()
+            for i in "${failed_list[@]}"; do
+                local dvwa_port=$((base_dvwa + i - 1))
+                destroy_pair "$i" "false" > /dev/null 2>&1 || true
+                sleep 2
+                if deploy_pair "$i" "$dvwa_port" "$vm_ip"; then
+                    ((retry_success++))
+                    log "OK" "[$i] Manual retry berhasil"
+                else
+                    still_fail+=("$i")
+                    log "ERROR" "[$i] Manual retry gagal"
+                fi
+            done
+            echo ""
+            log_ok "Retry selesai. Berhasil: $retry_success"
+            [[ ${#still_fail[@]} -gt 0 ]] && log_error "Masih gagal: ${still_fail[*]}"
+        fi
+    fi
     print_separator
     echo ""
     echo -e "${YELLOW}Tips peserta:${NC}"
@@ -957,6 +1039,120 @@ action_view_log() {
 }
 
 # ============================================================
+# MENU: DELETE / RESET SEBAGIAN INSTANCE
+# ============================================================
+
+action_partial_destroy() {
+    print_separator
+    log_action "DELETE / RESET SEBAGIAN INSTANCE"
+    print_separator
+
+    local all
+    all=$(get_all_dvwa)
+
+    if [[ -z "$all" ]]; then
+        log_warn "Belum ada instance yang di-deploy."
+        return
+    fi
+
+    local existing_count
+    existing_count=$(echo "$all" | grep -c . || true)
+    local base_dvwa
+    base_dvwa=$(get_dvwa_base_port)
+    local vm_ip
+    vm_ip=$(get_vm_ip)
+
+    echo -e "${CYAN}Instance aktif: $existing_count (peserta 1 s/d $(echo "$all" | grep -oE '[0-9]+$' | sort -n | tail -1))${NC}"
+    echo ""
+    echo "Format input: angka tunggal, range, atau kombinasi"
+    echo "Contoh: 5        → hapus peserta 5"
+    echo "        25-27    → hapus peserta 25, 26, 27"
+    echo "        31,33,38 → hapus peserta 31, 33, 38"
+    echo "        25-27,31 → kombinasi"
+    echo ""
+
+    local input_list
+    read -rp "$(echo -e "${BOLD}Input nomor peserta yang akan dihapus: ${NC}")" input_list
+
+    local parsed
+    parsed=$(parse_instance_list "$input_list")
+    if [[ -z "$parsed" ]]; then
+        log_error "Format input tidak valid: $input_list"
+        return
+    fi
+
+    local targets=($parsed)
+    echo ""
+    echo -e "${CYAN}Aksi:${NC}"
+    echo "  [1] Hapus permanen (container + volume)"
+    echo "  [2] Reset (hapus lalu deploy ulang fresh)"
+    echo "  [b] Batal"
+    echo ""
+    read -rp "$(echo -e "${BOLD}Pilih aksi: ${NC}")" aksi
+
+    case "$aksi" in
+        1)
+            echo ""
+            echo -e "${RED}Akan HAPUS PERMANEN peserta: ${targets[*]}${NC}"
+            confirm "Hapus permanen peserta tersebut?" || { echo "Dibatalkan."; return; }
+
+            for i in "${targets[@]}"; do
+                destroy_pair "$i" "false"
+                echo -e "   ${RED}Peserta $i dihapus${NC}"
+                log "ACTION" "Partial destroy: peserta $i dihapus"
+            done
+            log_ok "Partial destroy selesai: ${targets[*]}"
+            ;;
+        2)
+            echo ""
+            echo -e "${YELLOW}Akan RESET peserta: ${targets[*]}${NC}"
+            confirm "Reset (hapus + deploy ulang) peserta tersebut?" || { echo "Dibatalkan."; return; }
+
+            local success=0
+            local fail=0
+            local failed_list=()
+
+            for i in "${targets[@]}"; do
+                local dvwa_port=$((base_dvwa + i - 1))
+                echo -e "   ${CYAN}Reset peserta $i...${NC}"
+                # Bersihkan dulu kalau ada sisa container/volume
+                destroy_pair "$i" "false" > /dev/null 2>&1 || true
+                sleep 1
+                if deploy_pair "$i" "$dvwa_port" "$vm_ip"; then
+                    ((success++))
+                    log "OK" "Partial reset: peserta $i berhasil"
+                else
+                    # Retry 1x
+                    sleep 2
+                    destroy_pair "$i" "false" > /dev/null 2>&1 || true
+                    if deploy_pair "$i" "$dvwa_port" "$vm_ip"; then
+                        ((success++))
+                        log "OK" "Partial reset retry: peserta $i berhasil"
+                    else
+                        ((fail++))
+                        failed_list+=("$i")
+                        log "ERROR" "Partial reset: peserta $i gagal"
+                    fi
+                fi
+            done
+
+            echo ""
+            print_separator
+            log_ok "Partial reset selesai. Berhasil: $success / Gagal: $fail"
+            [[ $fail -gt 0 ]] && log_error "Masih gagal: ${failed_list[*]} — cek: tail -50 $LOG_FILE"
+            print_separator
+            ;;
+        b|B)
+            echo "Dibatalkan."
+            return
+            ;;
+        *)
+            echo -e "${RED}Pilihan tidak valid.${NC}"
+            ;;
+    esac
+}
+
+# ============================================================
 # MENU: EXPORT INFO PESERTA
 # ============================================================
 
@@ -1065,8 +1261,9 @@ main() {
         echo "  [5] Stop semua instances"
         echo "  [6] Destroy semua instances (hapus permanen)"
         echo "  [7] Tambah instance"
-        echo "  [8] Export info peserta (TXT/CSV)"
-        echo "  [9] Lihat log"
+        echo "  [8] Delete / Reset sebagian instance"
+        echo "  [9] Export info peserta (TXT/CSV)"
+        echo "  [10] Lihat log"
         echo "  [q] Keluar"
         print_separator
         read -rp "$(echo -e "${BOLD}Pilih menu: ${NC}")" choice
@@ -1081,8 +1278,9 @@ main() {
             5) action_stop    ;;
             6) action_destroy ;;
             7) action_add_instances ;;
-            8) action_export ;;
-            9) action_view_log ;;
+            8) action_partial_destroy ;;
+            9) action_export ;;
+            10) action_view_log ;;
             q|Q)
                 log "INFO" "===== DVWA Lab Manager keluar (PID $$) ====="
                 echo -e "${CYAN}Bye! Good luck dengan trainingnya!${NC}"

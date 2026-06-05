@@ -1,0 +1,36 @@
+dvwa-lab-deployer — Custom License
+Copyright (c) 2026 Tintus
+
+Permission is hereby granted to any person obtaining a copy of this software
+to use, copy, modify, and distribute it, subject to the following conditions:
+
+1. FREE USE
+   This software is free to use, modify, and distribute for any purpose,
+   including internal use within your organization (e.g. security awareness
+   training, internal developer labs, personal learning).
+
+2. COMMERCIAL USE
+   If you use this software to generate revenue — such as teaching paid
+   courses, conducting paid training sessions for external clients, or
+   offering it as part of a commercial service — you are kindly requested
+   (but not legally required) to make a donation to support the developer.
+
+   Donate here: https://ko-fi.com/tintus
+
+3. NO WARRANTY
+   This software is provided "as is", without warranty of any kind.
+   The author is not liable for any damages arising from its use.
+
+4. ATTRIBUTION
+   You are required to credit the original project when redistributing
+   or building upon this work. This includes forking, modifying, or
+   incorporating this software into another project.
+
+   Original project: https://github.com/tint-us/dvwa-lab-deployer
+
+---
+
+TL;DR:
+- Free for personal, educational, and internal organizational use.
+- If you make money using this — please consider buying me a coffee.
+  https://ko-fi.com/tintus
